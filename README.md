@@ -21,3 +21,6 @@ pip3 install "fastapi[standard]"
 
 # To run server 
 uvicorn app:app --host 0.0.0.0 --port 28080
+
+# docker run 
+docker run -v /data/vault/db.json:/app/db.json -p 28080:28080 tinydb-service

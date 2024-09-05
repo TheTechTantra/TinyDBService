@@ -4,7 +4,7 @@ from tinydb import Query
 
 class TinyDbReader:
     def __init__(self):
-        self.db = TinyDB("/data/vault/db.json")
+        self.db = TinyDB("/app/db.json")
 
     def read_data(self, key):
         return self.db.search(Query().key == key)
