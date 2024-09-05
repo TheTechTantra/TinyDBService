@@ -20,4 +20,4 @@ pip3 install FastAPI
 pip3 install "fastapi[standard]"
 
 # To run server 
-fastapi run app.py
+uvicorn app:app --host 0.0.0.0 --port 28080

@@ -1,8 +1,8 @@
 import logging
 
 from fastapi import FastAPI
-from .TinyDBUtil import TinyDbReader
-from .CredentialModel import Credential
+from TinyDBUtil import TinyDbReader
+from CredentialModel import Credential
 
 
 app = FastAPI()
