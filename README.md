@@ -24,3 +24,6 @@ uvicorn app:app --host 0.0.0.0 --port 28080
 
 # docker run 
 docker run -v /data/vault/db.json:/app/db.json -p 28080:28080 tinydb-service
+
+# command to run with docker network 
+ docker run --net app-net --name tinydbservice -v /data/vault/db.json:/app/db.json -p 28080:28080 tinydb-service

@@ -28,14 +28,18 @@ class TinyDbReader:
         return self.db.all()
 
     def read_by_key(self, key):
+        self.db.clear_cache()
         return self.db.search(Query().key == key)
 
     def read_by_value(self, value):
+        self.db.clear_cache()
         return self.db.search(Query().value == value)
 
     def read_by_key_and_value(self, key, value):
+        self.db.clear_cache()
         return self.db.search(Query().key == key and Query().value == value)
 
     def read_by_key_or_value(self, key, value):
+        self.db.clear_cache()
         return self.db.search(Query().key == key or Query().value == value)
      
