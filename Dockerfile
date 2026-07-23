@@ -10,8 +10,8 @@ COPY requirements.txt .
 # Install the dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the application code
-COPY . .
+# Copy only the application code (avoid baking .git, secrets, or db.json into the image)
+COPY app.py CredentialModel.py TinyDBUtil.py __init__.py ./
 
 # Expose the port
 EXPOSE 28080

@@ -1,0 +1,33 @@
+# Version control / history — never bake into the image
+.git
+.gitignore
+.dockerignore
+
+# Editor / tooling
+.claude
+
+# Python caches & artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+build/
+dist/
+*.egg-info/
+
+# Virtual environments
+.venv
+venv/
+env/
+ENV/
+bin/
+pyvenv.cfg
+
+# Secrets & runtime data — critical: keep these out of the image
+.env
+*.log
+db.json
+
+# Docs / build files not needed at runtime
+README.md
+Dockerfile
