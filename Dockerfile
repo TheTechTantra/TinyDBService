@@ -1,20 +1,19 @@
-# Use an official Python image as a base
 FROM python:3.12-slim
 
-# Set the working directory to /app
 WORKDIR /app
 
-# Copy the requirements file
 COPY requirements.txt .
-
-# Install the dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy only the application code (avoid baking .git, secrets, or db.json into the image)
-COPY app.py CredentialModel.py TinyDBUtil.py __init__.py ./
+COPY app.py auth.py crypto.py TinyDBUtil.py CredentialModel.py __init__.py ./
 
-# Expose the port
+# Non-root user for reduced attack surface
+RUN useradd --no-create-home --shell /bin/false appuser
+USER appuser
+
 EXPOSE 28080
 
-# Run the command to start the development server
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:28080/health')"
+
 CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "28080"]

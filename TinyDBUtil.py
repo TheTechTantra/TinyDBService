@@ -1,45 +1,39 @@
-from tinydb import TinyDB
-from tinydb import Query
+import os
+import threading
+
+from tinydb import TinyDB, Query
+
+from crypto import EncryptedJSONStorage, load_fernet
+
+_lock = threading.Lock()
+_db: TinyDB | None = None
+
+
+def _get_db() -> TinyDB:
+    global _db
+    if _db is None:
+        path = os.environ.get("TINYDB_PATH", "/data/db.json.enc")
+        fernet = load_fernet()
+        _db = TinyDB(path, storage=EncryptedJSONStorage, fernet=fernet)
+    return _db
 
 
 class TinyDbReader:
-    def __init__(self):
-        self.db = TinyDB("/app/db.json")
+    def read(self, key: str) -> str | None:
+        with _lock:
+            results = _get_db().search(Query().key == key)
+        return results[0]["value"] if results else None
 
-    def read_data(self, key):
-        return self.db.search(Query().key == key)
+    def all_map(self) -> dict[str, str]:
+        with _lock:
+            rows = _get_db().all()
+        return {r["key"]: r["value"] for r in rows}
 
-    def close(self):
-        self.db.close()
+    def write(self, key: str, value: str) -> None:
+        with _lock:
+            _get_db().upsert({"key": key, "value": value}, Query().key == key)
 
-    def __del__(self):
-        self.close()
-    
-    def write(self, key, data):
-        self.db.insert({'key ' : key  , 'value ' : data})
-
-    def delete(self, key):
-        self.db.remove(Query().key == key)
-
-    def update(self, key, data):
-        self.db.update(data, Query().key == key)
-
-    def read_all(self):
-        return self.db.all()
-
-    def read_by_key(self, key):
-        self.db.clear_cache()
-        return self.db.search(Query().key == key)
-
-    def read_by_value(self, value):
-        self.db.clear_cache()
-        return self.db.search(Query().value == value)
-
-    def read_by_key_and_value(self, key, value):
-        self.db.clear_cache()
-        return self.db.search(Query().key == key and Query().value == value)
-
-    def read_by_key_or_value(self, key, value):
-        self.db.clear_cache()
-        return self.db.search(Query().key == key or Query().value == value)
-     
+    def delete(self, key: str) -> int:
+        with _lock:
+            removed = _get_db().remove(Query().key == key)
+        return len(removed)
