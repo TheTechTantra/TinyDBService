@@ -15,6 +15,7 @@ truth for runtime secrets across services that would otherwise need a `.env` fil
 | `SECRET_STORE_TOKEN` | No | `X-API-Key` value required on data endpoints. Unset = open (dev only) |
 | `TINYDB_PATH` | No | Path to the encrypted vault file (default `/data/db.json.enc`) |
 | `TINYDB_ENC_KEYS_OLD` | No | Comma-separated old Fernet keys used for decryption only (rotation) |
+| `SERVICE_MODE` | No | `credentials` (default) or `tokenization` — see [Modes](#modes) |
 
 ## Generate a new encryption key
 
@@ -28,15 +29,46 @@ python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().d
 openssl rand -hex 24
 ```
 
-## API
+## Modes
+
+The service runs in one of two modes, selected by `SERVICE_MODE`:
+
+- **`credentials`** (default) — an encryption-at-rest key/value store. You pick
+  the key; reads return the **real value**. The value ends up in every consuming
+  system.
+- **`tokenization`** — the service issues an opaque random **token** as a
+  surrogate for each value. Downstream systems store the token, not the secret;
+  the real value lives only in the vault. A leaked token is meaningless — there
+  is nothing to crack, only a service-side lookup gated by `X-API-Key`.
+
+  A token is **not** an encryption of the value: it has no mathematical
+  relationship to it (256-bit CSPRNG). Tokenizing the same value twice returns
+  **two different tokens** (random vaulted scheme — no equality leak, no dedup).
+  The vault is still Fernet-encrypted at rest, so tokenization and encryption are
+  complementary, not either/or.
+
+## API — `credentials` mode
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| `GET` | `/health` | None | Liveness probe — returns `{"status":"ok"}` |
+| `GET` | `/health` | None | Liveness probe — returns `{"status":"ok","mode":"..."}` |
 | `GET` | `/credentials` | X-API-Key | All secrets as a flat `{key: value}` map |
 | `POST` | `/key/` | X-API-Key | Upsert a credential: body `{"key": "...", "value": "..."}` |
 | `GET` | `/credential/{key}` | X-API-Key | Read a single credential (404 if absent) |
 | `DELETE` | `/key/{key}` | X-API-Key | Delete a credential (404 if absent) |
+
+## API — `tokenization` mode
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `GET` | `/health` | None | Liveness probe |
+| `POST` | `/tokenize` | X-API-Key | Body `{"value": "..."}` → `{"token": "tok_..."}` |
+| `POST` | `/detokenize` | X-API-Key | Body `{"token": "tok_..."}` → `{"value": "..."}` (404 if unknown) |
+| `DELETE` | `/token/{token}` | X-API-Key | Revoke a token (404 if unknown) |
+
+Detokenize takes the token in the request **body** (not the URL) to keep tokens
+out of proxy/access logs. Every tokenize/detokenize/revoke is logged with the
+token id and event only — never the value.
 
 ## Run locally
 

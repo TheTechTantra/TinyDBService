@@ -52,7 +52,7 @@ class EncryptedJSONStorage(Storage):
 
     def write(self, data: dict[str, Any]) -> None:
         # Encrypt first, then atomic replace to minimise partial-write window
-        # (important for OneDrive-synced paths)
+        # (important for network- or cloud-synced filesystems)
         encrypted = self._fernet.encrypt(json.dumps(data).encode())
         dir_ = os.path.dirname(self._path) or "."
         fd, tmp = tempfile.mkstemp(dir=dir_)

@@ -1,0 +1,44 @@
+services:
+  tinydbservice:
+    image: thetechtantra/tinydbservice:latest
+    container_name: tinydbservice
+    networks: [app-net]
+    ports:
+      # Loopback-only: host-side seeding/inspection works; LAN cannot reach it.
+      # In-cluster access is via app-net by service name (http://tinydbservice:28080).
+      - "127.0.0.1:28080:28080"
+    environment:
+      TINYDB_ENC_KEY: "${TINYDB_ENC_KEY:?TINYDB_ENC_KEY not set — export it or set it in .env}"
+      SECRET_STORE_TOKEN: "${SECRET_STORE_TOKEN:-}"
+      TINYDB_PATH: "/data/db.json.enc"
+      # credentials (default) | tokenization
+      SERVICE_MODE: "${SERVICE_MODE:-credentials}"
+    volumes:
+      # Encrypted vault. Point VAULT_DIR at durable storage (see .env / .env.example).
+      # The encryption key (TINYDB_ENC_KEY) must never be stored in this same directory.
+      - ${VAULT_DIR:-./data}:/data
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: "0.25"
+          pids: 64
+    logging:
+      driver: "local"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:28080/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+# This network is owned here. Other services join it (as external) so they can
+# resolve http://tinydbservice:28080 by service name. Set the real name via
+# DOCKER_NETWORK in .env.
+networks:
+  app-net:
+    name: ${DOCKER_NETWORK:-tinydb-net}
