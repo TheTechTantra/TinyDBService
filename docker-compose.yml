@@ -36,9 +36,53 @@ services:
       retries: 3
       start_period: 10s
 
-# This network is owned here. Other services join it (as external) so they can
-# resolve http://tinydbservice:28080 by service name. Set the real name via
-# DOCKER_NETWORK in .env.
+  # Tokenization-mode sibling. SERVICE_MODE picks one mode per process, so the
+  # tokenize/detokenize routes cannot coexist with /credentials on one instance.
+  # This second container serves them on host port 28081 (image port is fixed at
+  # 28080) and shares the SAME encrypted vault file + key as the credentials
+  # instance — tokens live in a separate `tokens` table inside db.json.enc.
+  # NOTE: both processes open the same vault file; writes (seed on 28080, tokenize
+  # on 28081) are one-time/serial by design — avoid concurrent writes across the
+  # two, as each does an atomic whole-file replace.
+  tinydbservice-token:
+    image: thetechtantra/tinydbservice:latest
+    container_name: tinydbservice-token
+    networks: [app-net]
+    ports:
+      - "127.0.0.1:28081:28080"
+    environment:
+      TINYDB_ENC_KEY: "${TINYDB_ENC_KEY:?TINYDB_ENC_KEY not set — export it or set it in .env}"
+      SECRET_STORE_TOKEN: "${SECRET_STORE_TOKEN:-}"
+      TINYDB_PATH: "/data/db.json.enc"
+      SERVICE_MODE: "tokenization"
+    volumes:
+      - ${VAULT_DIR:-./data}:/data
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: "0.25"
+          pids: 64
+    logging:
+      driver: "local"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:28080/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+# Network resolution. In this deployment the `external-project` compose project
+# OWNS the shared network (DOCKER_NETWORK=app-net), so this compose must join
+# it as EXTERNAL (attach only, never try to create/label it — doing so triggers
+# "incorrect label com.docker.compose.network" against the owning project).
+# For a standalone TinyDBService (no Taurus), either pre-create the network
+# (`docker network create tinydb-net`) or flip DOCKER_NETWORK_EXTERNAL=false.
 networks:
   app-net:
     name: ${DOCKER_NETWORK:-tinydb-net}
+    external: ${DOCKER_NETWORK_EXTERNAL:-true}
