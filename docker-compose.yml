@@ -76,12 +76,9 @@ services:
       retries: 3
       start_period: 10s
 
-# Network resolution. In this deployment the `external-project` compose project
-# OWNS the shared network (DOCKER_NETWORK=app-net), so this compose must join
-# it as EXTERNAL (attach only, never try to create/label it — doing so triggers
-# "incorrect label com.docker.compose.network" against the owning project).
-# For a standalone TinyDBService (no Taurus), either pre-create the network
-# (`docker network create tinydb-net`) or flip DOCKER_NETWORK_EXTERNAL=false.
+# When joining an existing external network, set DOCKER_NETWORK to its name and
+# DOCKER_NETWORK_EXTERNAL=true. For standalone use, either pre-create the network
+# (`docker network create tinydb-net`) or set DOCKER_NETWORK_EXTERNAL=false.
 networks:
   app-net:
     name: ${DOCKER_NETWORK:-tinydb-net}
