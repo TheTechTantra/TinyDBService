@@ -2,7 +2,9 @@
 
 A minimal FastAPI service that stores key/value credentials in a [TinyDB](https://tinydb.readthedocs.io/)
 JSON file, **encrypted at rest** with [Fernet](https://cryptography.io/en/latest/fernet/) (AES-128-CBC + HMAC-SHA256)
-and protected by an API key on every data endpoint.
+and protected by an API key on every data endpoint. 
+
+## Note: This is not Vault and is aimed for local testing only.
 
 Designed to be a low-footprint Docker sidecar (~128 MB RAM, 0.25 CPU) — the single source of
 truth for runtime secrets across services that would otherwise need a `.env` file.
